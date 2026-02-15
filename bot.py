@@ -5,8 +5,8 @@ from db import init_db, add_user, user_exists
 
 TOKEN = os.getenv("8278457315:AAEKRKEPT68yZDIC2OtosjQy-Q5aR_whGjU")
 ADMIN_ID = int(os.getenv("8575573468"))
-PORT = int(os.environ.get("PORT", 8443))  # Railway port
-RAILWAY_URL = "https://your-railway-app.up.railway.app"  # zameni sa tvojim URL
+PORT = int(os.environ.get("PORT", 8443))
+RAILWAY_URL = "https://<tvoj-railway-app>.up.railway.app"  # zameni sa URL tvog projekta
 
 # ---- komande ----
 async def get_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
