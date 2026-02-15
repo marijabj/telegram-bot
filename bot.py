@@ -8,7 +8,7 @@ import db  # tvoj db.py modul
 TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
 RAILWAY_URL = os.getenv("RAILWAY_URL")  # npr. https://telegram-bot.up.railway.app
-PORT = int(os.environ.get("PORT", 8080))  # Railway prosleđuje port
+PORT = int(os.environ.get("PORT", 8443))  # Railway prosleđuje port
 
 # ================= Logging =================
 logging.basicConfig(
