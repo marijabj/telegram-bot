@@ -1,37 +1,34 @@
-import psycopg2
 import os
+import psycopg2
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-def get_conn():
+def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 def init_db():
-    conn = get_conn()
+    conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        user_id BIGINT PRIMARY KEY,
-        username TEXT
-    );
+        CREATE TABLE IF NOT EXISTS users (
+            user_id BIGINT PRIMARY KEY,
+            username TEXT NOT NULL
+        )
     """)
     conn.commit()
     cur.close()
     conn.close()
 
 def add_user(user_id, username):
-    conn = get_conn()
+    conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO users (user_id, username) VALUES (%s,%s) ON CONFLICT DO NOTHING",
-        (user_id, username)
-    )
+    cur.execute("INSERT INTO users (user_id, username) VALUES (%s, %s) ON CONFLICT DO NOTHING", (user_id, username))
     conn.commit()
     cur.close()
     conn.close()
 
 def user_exists(user_id):
-    conn = get_conn()
+    conn = get_connection()
     cur = conn.cursor()
     cur.execute("SELECT 1 FROM users WHERE user_id=%s", (user_id,))
     exists = cur.fetchone() is not None
