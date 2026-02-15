@@ -1,70 +1,58 @@
 import os
-import asyncio
+from fastapi import FastAPI, Request
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from db import init_db, add_user, user_exists
 
-# Pokretanje baze (kreira tabelu users ako ne postoji)
+TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
+RAILWAY_URL = os.getenv("RAILWAY_URL")
+
+# Init DB
 init_db()
 
-# Token i Admin ID iz env varijabli
-TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID", 0))  # ID admina
+# Telegram app
+telegram_app = ApplicationBuilder().token(TOKEN).build()
 
-print("BOT_TOKEN:", os.getenv("BOT_TOKEN"))
-print("ADMIN_ID:", os.getenv("ADMIN_ID"))
-
-if not TOKEN:
-    raise ValueError("BOT_TOKEN nije definisan!")
-
-# ---------- HANDLERI ----------
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Pozdravna poruka kada korisnik startuje bota."""
-    await update.message.reply_text(
-        f"Pozdrav, {update.effective_user.first_name}! Dobrodošao/la na bot."
-    )
+# ================= KOMANDE =================
 
 async def get_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Vrati user_id i username korisnika koji je poslao komandu."""
     user = update.effective_user
     await update.message.reply_text(
-        f"User ID: {user.id}\nUsername: @{user.username if user.username else 'N/A'}"
+        f"User ID: {user.id}\nUsername: {user.username}"
     )
 
-async def add_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Dodavanje korisnika u bazu, samo za admina."""
-    user = update.effective_user
-    if user.id != ADMIN_ID:
-        await update.message.reply_text("Nemate ovlašćenje za ovu komandu.")
+async def add_user_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Nemaš permisiju.")
         return
 
-    # Očekujemo dva argumenta: user_id username
     if len(context.args) != 2:
-        await update.message.reply_text("Korišćenje: /add_user user_id username")
+        await update.message.reply_text("Upotreba: /add_user user_id username")
         return
 
-    try:
-        new_user_id = int(context.args[0])
-        username = context.args[1]
-        add_user(new_user_id, username)
-        await update.message.reply_text(f"Korisnik @{username} dodat u bazu.")
-    except ValueError:
-        await update.message.reply_text("user_id mora biti broj.")
+    user_id = int(context.args[0])
+    username = context.args[1]
+    add_user(user_id, username)
+    await update.message.reply_text(f"✅ Korisnik {username} dodat.")
 
-# ---------- MAIN ----------
+telegram_app.add_handler(CommandHandler("get_user_info", get_user_info))
+telegram_app.add_handler(CommandHandler("add_user", add_user_cmd))
 
-async def main():
-    app = ApplicationBuilder().token(TOKEN).build()
+# ================= FASTAPI SERVER =================
 
-    # Dodavanje handlera
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("get_user_info", get_user_info))
-    app.add_handler(CommandHandler("add_user", add_user_command))
+app = FastAPI()
 
-    # Pokreni bota asinhrono
-    await app.run_polling()
+@app.on_event("startup")
+async def startup():
+    await telegram_app.initialize()
+    await telegram_app.bot.set_webhook(f"{RAILWAY_URL}/webhook")
+    print("Webhook postavljen!")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+@app.post("/webhook")
+async def webhook(request: Request):
+    data = await request.json()
+    update = Update.de_json(data, telegram_app.bot)
+    await telegram_app.process_update(update)
+    return {"ok": True}
 
