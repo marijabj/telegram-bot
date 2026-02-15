@@ -1,73 +1,70 @@
 import os
-import logging
+import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-import db  # tvoj db.py modul
+from db import init_db, add_user, user_exists
 
-# ================= Environment Variables =================
+# Pokretanje baze (kreira tabelu users ako ne postoji)
+init_db()
+
+# Token i Admin ID iz env varijabli
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
-RAILWAY_URL = os.getenv("RAILWAY_URL")  # npr. https://telegram-bot.up.railway.app
-PORT = int(os.environ.get("PORT", 8443))  # Railway prosleđuje port
+ADMIN_ID = int(os.getenv("ADMIN_ID", 0))  # ID admina
 
-# ================= Logging =================
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
-)
+print("BOT_TOKEN:", os.getenv("BOT_TOKEN"))
+print("ADMIN_ID:", os.getenv("ADMIN_ID"))
 
-# ================= Command Handlers =================
-async def get_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    await update.message.reply_text(f"User ID: {user.id}\nUsername: @{user.username}")
+if not TOKEN:
+    raise ValueError("BOT_TOKEN nije definisan!")
 
-async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
+# ---------- HANDLERI ----------
 
-    if user.id != ADMIN_ID:
-        await update.message.reply_text("Samo admin može dodavati korisnike!")
-        return
-
-    if len(context.args) != 2:
-        await update.message.reply_text("Upotreba: /add_user <user_id> <username>")
-        return
-
-    try:
-        user_id = int(context.args[0])
-        username = context.args[1]
-    except ValueError:
-        await update.message.reply_text("User ID mora biti broj.")
-        return
-
-    try:
-        db.add_user(user_id, username)
-        await update.message.reply_text(f"Korisnik @{username} dodat u bazu!")
-    except Exception as e:
-        logging.error(f"DB error: {e}")
-        await update.message.reply_text("Došlo je do greške prilikom dodavanja korisnika.")
-
-# ================= Main =================
-def main():
-    # Napravi tabelu ako ne postoji
-    db.init_db()
-
-    # Telegram app
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    # Registracija komandi
-    app.add_handler(CommandHandler("get_user_info", get_user_info))
-    app.add_handler(CommandHandler("add_user", add_user))
-
-    # Webhook setup
-    webhook_url = f"{RAILWAY_URL}/{TOKEN}"
-    print(f"Starting webhook on {webhook_url} at port {PORT}")
-
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=webhook_url
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Pozdravna poruka kada korisnik startuje bota."""
+    await update.message.reply_text(
+        f"Pozdrav, {update.effective_user.first_name}! Dobrodošao/la na bot."
     )
 
+async def get_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Vrati user_id i username korisnika koji je poslao komandu."""
+    user = update.effective_user
+    await update.message.reply_text(
+        f"User ID: {user.id}\nUsername: @{user.username if user.username else 'N/A'}"
+    )
+
+async def add_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Dodavanje korisnika u bazu, samo za admina."""
+    user = update.effective_user
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("Nemate ovlašćenje za ovu komandu.")
+        return
+
+    # Očekujemo dva argumenta: user_id username
+    if len(context.args) != 2:
+        await update.message.reply_text("Korišćenje: /add_user user_id username")
+        return
+
+    try:
+        new_user_id = int(context.args[0])
+        username = context.args[1]
+        add_user(new_user_id, username)
+        await update.message.reply_text(f"Korisnik @{username} dodat u bazu.")
+    except ValueError:
+        await update.message.reply_text("user_id mora biti broj.")
+
+# ---------- MAIN ----------
+
+async def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    # Dodavanje handlera
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("get_user_info", get_user_info))
+    app.add_handler(CommandHandler("add_user", add_user_command))
+
+    # Pokreni bota asinhrono
+    await app.run_polling()
+
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
