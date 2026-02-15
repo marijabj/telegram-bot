@@ -46,6 +46,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup():
     await telegram_app.initialize()
+    await telegram_app.start()   # 🔥 OVO JE FALILO
     await telegram_app.bot.set_webhook(f"{RAILWAY_URL}/webhook")
     print("Webhook postavljen!")
 
