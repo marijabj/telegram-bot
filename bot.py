@@ -56,4 +56,13 @@ async def webhook(request: Request):
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"ok": True}
+    
+@app.post("/webhook")
+async def webhook(request: Request):
+    data = await request.json()
+    print("UPDATE:", data)   # DEBUG
+    update = Update.de_json(data, telegram_app.bot)
+    await telegram_app.process_update(update)
+    return {"ok": True}
+
 
