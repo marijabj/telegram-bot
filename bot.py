@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
+ADMIN_ID = int(os.getenv("ADMIN_ID", "8575573468"))
 RAILWAY_URL = os.getenv("RAILWAY_URL")  # npr. https://your-project.up.railway.app
 
 # Telegram bot aplikacija (webhook-only)
