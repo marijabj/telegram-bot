@@ -20,10 +20,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("BOT RADI ✅")
 
 async def get_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    await update.message.reply_text(
-        f"User ID: {user.id}\nUsername: {user.username}"
-    )
+    await update.message.reply_text(f"Hello {update.effective_user.id}")
 
 async def add_user_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
@@ -60,11 +57,15 @@ async def startup():
     
 @app.post("/webhook")
 async def webhook(request: Request):
-    data = await request.json()
-    print("UPDATE:", data)   # DEBUG
-    update = Update.de_json(data, telegram_app.bot)
-    await telegram_app.process_update(update)
-    return {"ok": True}
+    try:
+        data = await request.json()
+        print("UPDATE:", data)
+        update = Update.de_json(data, telegram_app.bot)
+        await telegram_app.process_update(update)
+        return {"ok": True}
+    except Exception as e:
+        print("ERROR:", e)
+        return {"ok": False, "error": str(e)}
    
 
 
