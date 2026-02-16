@@ -16,6 +16,9 @@ telegram_app = ApplicationBuilder().token(TOKEN).build()
 
 # ================= KOMANDE =================
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("BOT RADI ✅")
+
 async def get_user_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await update.message.reply_text(
@@ -36,6 +39,7 @@ async def add_user_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_user(user_id, username)
     await update.message.reply_text(f"✅ Korisnik {username} dodat.")
 
+telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("get_user_info", get_user_info))
 telegram_app.add_handler(CommandHandler("add_user", add_user_cmd))
 
@@ -49,13 +53,6 @@ async def startup():
     await telegram_app.start()   # 🔥 OVO JE FALILO
     await telegram_app.bot.set_webhook(f"{RAILWAY_URL}/webhook")
     print("Webhook postavljen!")
-
-@app.post("/webhook")
-async def webhook(request: Request):
-    data = await request.json()
-    update = Update.de_json(data, telegram_app.bot)
-    await telegram_app.process_update(update)
-    return {"ok": True}
     
 @app.post("/webhook")
 async def webhook(request: Request):
