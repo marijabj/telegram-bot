@@ -47,6 +47,10 @@ telegram_app.add_handler(CommandHandler("add_user", add_user_cmd))
 
 app = FastAPI()
 
+@app.get("/")
+def root():
+    return {"ok": True}
+
 @app.on_event("startup")
 async def startup():
     await telegram_app.initialize()
@@ -61,5 +65,6 @@ async def webhook(request: Request):
     update = Update.de_json(data, telegram_app.bot)
     await telegram_app.process_update(update)
     return {"ok": True}
+   
 
 
